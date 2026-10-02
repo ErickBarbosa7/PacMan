@@ -51,12 +51,25 @@ const MAZE = MAZE_STR.map( ( row ) => row.split( '' ).map( parseTile ) );
 
 const TUNNEL_ROW = 14;
 const PACMAN_START = { x: 13, y: 23 };
+// Los cuatro arrancan dentro de la pen. El indice fija el color (GHOST_COLORS).
 const GHOST_STARTS = [
-  { x: 13, y: 14, kind: 'hunter' }, // dentro de la pen
-  { x: 14, y: 14, kind: 'random' }, // dentro de la pen
+  { x: 13, y: 13, kind: 'hunter' },  // indice 0 -> rojo
+  { x: 14, y: 13, kind: 'ambush' },  // indice 1 -> cian
+  { x: 12, y: 14, kind: 'flank' },   // indice 2 -> rosa
+  { x: 15, y: 14, kind: 'coward' },  // indice 3 -> naranja
+];
+
+// Caja del cercado de los fantasmas: x 11..16, y 13..15 (18 celdas).
+const PEN = { x0: 11, y0: 13, x1: 16, y1: 15 };
+// Puerta de la pen: muro para Pac-Man, transitable para los fantasmas.
+const PEN_DOOR = [
+  { x: 13, y: 12 },
+  { x: 14, y: 12 },
 ];
 
 window.MAZE = MAZE;
 window.TUNNEL_ROW = TUNNEL_ROW;
 window.PACMAN_START = PACMAN_START;
 window.GHOST_STARTS = GHOST_STARTS;
+window.PEN = PEN;
+window.PEN_DOOR = PEN_DOOR;
