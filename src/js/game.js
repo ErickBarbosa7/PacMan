@@ -10,8 +10,8 @@ const DIRS = {
 };
 const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 
-const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
-const GHOST_SPEED = 0.1;    // 1/10 celda/frame
+const PACMAN_SPEED = 1 / 12; // 1/n celda/paso logico para garantizar alineacion
+const GHOST_SPEED = 1 / 16;  // 1/n celda/paso logico para garantizar alineacion
 
 // Desempate entre direcciones a igual distancia: primero la actual, luego
 // derecha, izquierda, arriba y abajo. Evita el vaiven entre rutas optimas.

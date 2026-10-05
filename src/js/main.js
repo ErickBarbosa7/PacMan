@@ -39,10 +39,27 @@ function startGame() {
 
 if ( actionBtn ) actionBtn.addEventListener( 'click', startGame );
 
-function loop() {
+const STEP_MS = 1000 / 60;
+const MAX_FRAME_MS = 250;
+let lastTime = 0;
+let accumulator = 0;
+
+function loop( now ) {
+  // Inicializar lastTime en la primera llamada de requestAnimationFrame
+  if ( !lastTime ) lastTime = now;
+  const dt = now - lastTime;
+  lastTime = now;
+
+  accumulator += Math.min( dt, MAX_FRAME_MS );
+
   frame++;
   if ( game.state === 'playing' ) {
-    update( game );
+    while ( accumulator >= STEP_MS ) {
+      update( game );
+      accumulator -= STEP_MS;
+    }
+
+    // El estado pudo haber cambiado a won o lost tras los updates de este frame
     if ( game.state === 'won' ) showOverlay( 'GANASTE', 'win', 'Reiniciar' );
     else if ( game.state === 'lost' ) showOverlay( 'PERDISTE', 'lose', 'Reiniciar' );
   }
@@ -50,4 +67,4 @@ function loop() {
   requestAnimationFrame( loop );
 }
 
-loop();
+requestAnimationFrame( loop );
