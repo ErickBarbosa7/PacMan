@@ -287,9 +287,16 @@ function decideGhost( game, g ) {
   // Sin salida (callejon): permitir el giro de 180.
   const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
 
-  // Fantasma comido regresa a su home en la pen
+  // Fantasma comido regresa a su home en la pen.
+  // Si esta afuera, su objetivo es la puerta de la pen. Si apuntara directo a su home,
+  // la distancia Manhattan lo haria chocar contra la pared exterior y quedarse dando vueltas.
   if ( g.state === 'eaten' ) {
-    g.dir = chooseDir( g, g.home, choices );
+    let target = { x: 13, y: 12 }; // Celda de la puerta
+    // Si ya esta en la puerta o adentro, apunta a su home exacto
+    if ( (g.y === 12 && (g.x === 13 || g.x === 14)) || inPen(g) ) {
+      target = g.home;
+    }
+    g.dir = chooseDir( g, target, choices );
     return;
   }
 
