@@ -145,14 +145,15 @@ function drawGhostEyes( ctx, cx, cy, dirName ) {
   }
 }
 
-function drawFrightenedFace( ctx, cx, cy ) {
-  ctx.fillStyle = '#ffb8ae';
+function drawFrightenedFace( ctx, cx, cy, isWhite ) {
+  const faceColor = isWhite ? '#ff0000' : '#ffb8ae';
+  ctx.fillStyle = faceColor;
   for ( const off of [ -3.5, 3.5 ] ) {
     ctx.beginPath();
     ctx.arc( cx + off, cy - 2, 1.5, 0, Math.PI * 2 );
     ctx.fill();
   }
-  ctx.strokeStyle = '#ffb8ae';
+  ctx.strokeStyle = faceColor;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo( cx - 5, cy + 3 );
@@ -163,15 +164,17 @@ function drawFrightenedFace( ctx, cx, cy ) {
   ctx.stroke();
 }
 
-function drawGhost( ctx, g, color ) {
+function drawGhost( ctx, g, color, frightenedSteps ) {
   const { cx, cy } = cellCenter( g.x, g.y );
   const r = TILE / 2 - 1;
 
   if ( g.state === 'eaten' ) {
     drawGhostEyes( ctx, cx, cy, g.dir );
   } else if ( g.state === 'frightened' ) {
-    drawGhostBody( ctx, cx, cy, r, '#2121ff' ); // azul asustado
-    drawFrightenedFace( ctx, cx, cy );
+    const isWhite = frightenedSteps <= 120 && Math.floor( frightenedSteps / 15 ) % 2 === 0;
+    const bodyColor = isWhite ? '#ffffff' : '#2121ff';
+    drawGhostBody( ctx, cx, cy, r, bodyColor );
+    drawFrightenedFace( ctx, cx, cy, isWhite );
   } else {
     drawGhostBody( ctx, cx, cy, r, color );
     drawGhostEyes( ctx, cx, cy, g.dir );
@@ -203,7 +206,7 @@ function draw( ctx, game, frame ) {
   drawDots( ctx, grid );
   drawPowerPellets( ctx, grid );
   drawPacman( ctx, game.pacman, frame );
-  game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000' ) );
+  game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000', game.frightenedSteps ) );
   drawHUD( ctx, game, W );
 }
 
