@@ -5,7 +5,7 @@ const TILE = 20;
 const WALL_COLOR = '#2121ff';
 const DOOR_COLOR = '#ffb8ff';
 const DOT_COLOR = '#ffb897';
-
+const POWER_PELLET_COLOR = '#33ccff';
 function cellCenter( x, y ) {
   return { cx: x * TILE + TILE / 2, cy: y * TILE + TILE / 2 };
 }
@@ -79,6 +79,19 @@ function drawDots( ctx, grid ) {
   }
 }
 
+function drawPowerPellets( ctx, grid ) {
+  ctx.fillStyle = POWER_PELLET_COLOR;
+  for ( let y = 0; y < grid.length; y++ ) {
+    for ( let x = 0; x < grid[ 0 ].length; x++ ) {
+      if ( grid[ y ][ x ] !== 4 ) continue;
+      const { cx, cy } = cellCenter( x, y );
+      ctx.beginPath();
+      ctx.arc( cx, cy, 5, 0, Math.PI * 2 );
+      ctx.fill();
+    }
+  }
+}
+
 function drawPacman( ctx, p, frame ) {
   const { cx, cy } = cellCenter( p.x, p.y );
   let rot = 0;
@@ -98,10 +111,7 @@ function drawPacman( ctx, p, frame ) {
   ctx.fill();
 }
 
-function drawGhost( ctx, g, color ) {
-  const { cx, cy } = cellCenter( g.x, g.y );
-  const r = TILE / 2 - 1;
-  const top = cy - r;
+function drawGhostBody( ctx, cx, cy, r, color ) {
   const bottom = cy + r;
   const left = cx - r;
   const right = cx + r;
@@ -117,9 +127,10 @@ function drawGhost( ctx, g, color ) {
   ctx.lineTo( left, bottom );
   ctx.closePath();
   ctx.fill();
+}
 
-  // ojos mirando segun direccion
-  const dir = DIRS[ g.dir ] || { x: 0, y: 0 };
+function drawGhostEyes( ctx, cx, cy, dirName ) {
+  const dir = DIRS[ dirName ] || { x: 0, y: 0 };
   const ex = dir.x * 1.6;
   const ey = dir.y * 1.6;
   for ( const off of [ -3.5, 3.5 ] ) {
@@ -131,6 +142,39 @@ function drawGhost( ctx, g, color ) {
     ctx.beginPath();
     ctx.arc( cx + off + ex, cy - 1 + ey, 1.5, 0, Math.PI * 2 );
     ctx.fill();
+  }
+}
+
+function drawFrightenedFace( ctx, cx, cy ) {
+  ctx.fillStyle = '#ffb8ae';
+  for ( const off of [ -3.5, 3.5 ] ) {
+    ctx.beginPath();
+    ctx.arc( cx + off, cy - 2, 1.5, 0, Math.PI * 2 );
+    ctx.fill();
+  }
+  ctx.strokeStyle = '#ffb8ae';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo( cx - 5, cy + 3 );
+  ctx.lineTo( cx - 2.5, cy + 1.5 );
+  ctx.lineTo( cx, cy + 3 );
+  ctx.lineTo( cx + 2.5, cy + 1.5 );
+  ctx.lineTo( cx + 5, cy + 3 );
+  ctx.stroke();
+}
+
+function drawGhost( ctx, g, color ) {
+  const { cx, cy } = cellCenter( g.x, g.y );
+  const r = TILE / 2 - 1;
+
+  if ( g.state === 'eaten' ) {
+    drawGhostEyes( ctx, cx, cy, g.dir );
+  } else if ( g.state === 'frightened' ) {
+    drawGhostBody( ctx, cx, cy, r, '#2121ff' ); // azul asustado
+    drawFrightenedFace( ctx, cx, cy );
+  } else {
+    drawGhostBody( ctx, cx, cy, r, color );
+    drawGhostEyes( ctx, cx, cy, g.dir );
   }
 }
 
@@ -157,6 +201,7 @@ function draw( ctx, game, frame ) {
   drawWalls( ctx, grid );
   drawDoor( ctx, grid );
   drawDots( ctx, grid );
+  drawPowerPellets( ctx, grid );
   drawPacman( ctx, game.pacman, frame );
   game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000' ) );
   drawHUD( ctx, game, W );

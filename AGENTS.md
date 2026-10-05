@@ -39,7 +39,7 @@ import/export. The order **is** the wiring; changing it breaks the page.
 ## Maze geometry — four places must stay in sync
 
 The level is authored as 31 readable strings of 28 chars in `maze.js`, then parsed to numbers.
-`#` wall=1 · `.` dot=2 · ` ` walkable empty=0 · `-` pen door=3.
+`#` wall=1 · `.` dot=2 · ` ` walkable empty=0 · `-` pen door=3 · `o` power pellet=4.
 
 If you change the grid, update **all** of these or rendering desynchronizes:
 
@@ -56,10 +56,11 @@ no constants module.
 
 - Positions are **floating point sub-cell** coordinates; turning, dot-eating and ghost decisions only
   run when the actor is within `1e-3` of a cell center (`aligned()` in `game.js`).
-- Speeds (`PACMAN_SPEED`, `GHOST_SPEED`) must be **exactly `1/n` cells per logical step** — `1/12`,
-  `1/16`, `1/8`, … Never an arbitrary decimal. The actor must land on *every* cell center, because that
+- Speeds (`PACMAN_SPEED`, `GHOST_SPEED`, `FRIGHTENED_SPEED`) must be **exactly `1/n` cells per logical step** — `1/12`,
+  `1/16`, `1/32`, … Never an arbitrary decimal. The actor must land on *every* cell center, because that
   is the only place turning and dot-eating happen. `0.13` (=13/100) does realign, but only every 100
   steps after 13 cells: it would eat 1 dot in 13 and turn 13 cells late. Change the denominator only.
+- When changing a ghost's speed on the fly (e.g., entering/leaving frightened state), its position must be explicitly rounded to the nearest cell. A floating point position with a new speed will never hit a cell center again, trapping the actor between cells.
 - The logical step is decoupled from the display refresh: `main.js` runs `update()` at a fixed
   `STEP_MS = 1000 / 60` via an accumulator, while `draw()` runs on every `requestAnimationFrame`.
   Changing `PACMAN_SPEED`/`GHOST_SPEED` changes gameplay speed; changing `STEP_MS` changes how often

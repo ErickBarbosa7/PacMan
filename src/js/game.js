@@ -12,6 +12,10 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 
 const PACMAN_SPEED = 1 / 12; // 1/n celda/paso logico para garantizar alineacion
 const GHOST_SPEED = 1 / 16;  // 1/n celda/paso logico para garantizar alineacion
+const POWER_PELLET_SCORE = 50;
+const GHOST_SCORE = 200;
+const FRIGHTENED_STEPS = 360;
+const FRIGHTENED_SPEED = 1 / 32; // mitad exacta de GHOST_SPEED (1/16)
 
 // Desempate entre direcciones a igual distancia: primero la actual, luego
 // derecha, izquierda, arriba y abajo. Evita el vaiven entre rutas optimas.
@@ -31,13 +35,21 @@ function createGame() {
   grid[ PACMAN_START.y ][ PACMAN_START.x ] = 0;
 
   let dots = 0;
-  for ( const row of grid ) for ( const v of row ) if ( v === 2 ) dots++;
+  let energizers = 0;
+  for ( const row of grid ) {
+    for ( const v of row ) {
+      if ( v === 2 ) dots++;
+      if ( v === 4 ) energizers++;
+    }
+  }
 
   return {
     state: 'start',
     score: 0,
     lives: 3,
     dotsRemaining: dots,
+    energizersLeft: energizers,
+    frightenedSteps: 0,
     grid,
     pacman: {
       x: PACMAN_START.x,
@@ -52,6 +64,8 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      state: 'normal',
+      home: { x: g.x, y: g.y },
     } ) ),
   };
 }
@@ -110,6 +124,13 @@ function movePacman( game ) {
       game.score += 10;
       game.dotsRemaining--;
     }
+    // Comer Power Pellet.
+    if ( grid[ p.y ][ p.x ] === 4 ) {
+      grid[ p.y ][ p.x ] = 0;
+      game.score += POWER_PELLET_SCORE;
+      game.energizersLeft--;
+      startFrightened( game );
+    }
     // Si no puede seguir, se detiene en la celda.
     if ( !canMove( grid, p.x, p.y, p.dir, 'pacman' ) ) return;
   }
@@ -123,6 +144,29 @@ function movePacman( game ) {
 // Celda de Pac-Man.
 function pacCell( game ) {
   return { x: Math.round( game.pacman.x ), y: Math.round( game.pacman.y ) };
+}
+
+function startFrightened( game ) {
+  game.frightenedSteps = FRIGHTENED_STEPS;
+  game.ghosts.forEach( ( g ) => {
+    if ( g.state === 'normal' ) {
+      g.state = 'frightened';
+      g.speed = FRIGHTENED_SPEED;
+      // Redondear posicion al cambiar velocidad (evita quedar atrapado entre celdas)
+      g.x = Math.round( g.x );
+      g.y = Math.round( g.y );
+      g.dir = OPPOSITE[ g.dir ];
+    }
+  } );
+}
+
+function eatGhost( game, g ) {
+  game.score += GHOST_SCORE;
+  g.state = 'eaten';
+  g.speed = GHOST_SPEED;
+  g.x = Math.round( g.x );
+  g.y = Math.round( g.y );
+  g.dir = OPPOSITE[ g.dir ];
 }
 
 // Celda situada `steps` celdas por delante del actor en su direccion actual.
@@ -226,11 +270,25 @@ function nearestPenDoor( g ) {
 function decideGhost( game, g ) {
   const grid = game.grid;
 
+  // Revivir fantasma al pisar el cercado
+  if ( g.state === 'eaten' && inPen( g ) ) {
+    g.state = 'normal';
+    g.speed = GHOST_SPEED;
+    g.x = Math.round( g.x );
+    g.y = Math.round( g.y );
+  }
+
   const options = Object.keys( DIRS ).filter(
-    ( dir ) => dir !== OPPOSITE[ g.dir ] && canMove( grid, g.x, g.y, dir, 'ghost' )
+    ( dir ) => ( dir !== OPPOSITE[ g.dir ] || g.state === 'eaten' ) && canMove( grid, g.x, g.y, dir, 'ghost' )
   );
   // Sin salida (callejon): permitir el giro de 180.
   const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
+
+  // Fantasma comido regresa a su home en la pen
+  if ( g.state === 'eaten' ) {
+    g.dir = chooseDir( g, g.home, choices );
+    return;
+  }
 
   // Dentro del cercado el objetivo es la puerta. Sin esto el fantasma
   // tendria que rodear paredes para alcanzar un objetivo exterior.
@@ -260,6 +318,7 @@ function moveGhost( game, g ) {
 }
 
 function resetPositions( game ) {
+  game.frightenedSteps = 0;
   const p = game.pacman;
   p.x = PACMAN_START.x;
   p.y = PACMAN_START.y;
@@ -269,6 +328,8 @@ function resetPositions( game ) {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    g.state = 'normal';
+    g.speed = GHOST_SPEED;
   } );
 }
 
@@ -280,15 +341,35 @@ function update( game ) {
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
+  if ( game.frightenedSteps > 0 ) {
+    game.frightenedSteps--;
+    if ( game.frightenedSteps === 0 ) {
+      game.ghosts.forEach( ( g ) => {
+        if ( g.state === 'frightened' ) {
+          g.state = 'normal';
+          g.speed = GHOST_SPEED;
+          g.x = Math.round( g.x );
+          g.y = Math.round( g.y );
+        }
+      } );
+    }
+  }
+
   for ( const g of game.ghosts ) {
     if ( collides( game.pacman, g ) ) {
-      game.lives--;
-      if ( game.lives <= 0 ) {
-        game.state = 'lost';
-        return;
+      if ( g.state === 'eaten' ) {
+        // Nada
+      } else if ( g.state === 'frightened' ) {
+        eatGhost( game, g );
+      } else {
+        game.lives--;
+        if ( game.lives <= 0 ) {
+          game.state = 'lost';
+          return;
+        }
+        resetPositions( game );
+        break;
       }
-      resetPositions( game );
-      break;
     }
   }
 
