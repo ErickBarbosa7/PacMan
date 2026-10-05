@@ -1,6 +1,6 @@
 # SPEC 02 — Velocidad pausada y ritmo independiente del monitor
 
-> **Status:** Draft
+> **Status:** Approved
 > **Date:** 2026-10-02
 > **Objective:** El juego avanza al mismo ritmo en cualquier monitor y más despacio que en la SPEC 01.
 

@@ -1,6 +1,6 @@
 # SPEC 03 — Bolitas de poder y fantasmas azules
 
-> **Status:** Draft
+> **Status:** Approved
 > **Depends on:** SPEC 01
 > **Date:** 2026-10-06
 > **Objective:** Cuatro bolitas azules que, al ser comidas, ponen a los cuatro fantasmas en modo asustado durante 6 s y, si Pac-Man los captura, regresan a la base como un par de ojos y reviven.

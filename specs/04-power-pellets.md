@@ -1,6 +1,6 @@
 # SPEC 04 — Power Pellets: Pac-Man puede comer fantasmas
 
-> **Status:** Draft
+> **Status:** Approved
 > **Depends on:** SPEC 01
 > **Date:** 2026-10-06
 > **Objective:** Cuatro Power Pellets que, al ser comidas, ponen a los cuatro fantasmas en modo asustado y permiten a Pac-Man comerlos, tras lo cual regresan a la base como un par de ojos.
