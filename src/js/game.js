@@ -270,12 +270,15 @@ function nearestPenDoor( g ) {
 function decideGhost( game, g ) {
   const grid = game.grid;
 
-  // Revivir fantasma al pisar el cercado
-  if ( g.state === 'eaten' && inPen( g ) ) {
+  // Revivir fantasma al llegar a su celda de inicio (home) dentro del cercado
+  if ( g.state === 'eaten' && g.x === g.home.x && g.y === g.home.y ) {
     g.state = 'normal';
     g.speed = GHOST_SPEED;
     g.x = Math.round( g.x );
     g.y = Math.round( g.y );
+    // Al revivir, lo forzamos a mirar hacia arriba para que salga directo
+    // y no se quede dando vueltas por la regla de no regresar.
+    g.dir = 'up';
   }
 
   const options = Object.keys( DIRS ).filter(
