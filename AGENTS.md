@@ -56,9 +56,14 @@ no constants module.
 
 - Positions are **floating point sub-cell** coordinates; turning, dot-eating and ghost decisions only
   run when the actor is within `1e-3` of a cell center (`aligned()` in `game.js`).
-- Speeds must stay **exact fractions of one cell per frame** — `PACMAN_SPEED = 0.125` (1/8),
-  `GHOST_SPEED = 0.1` (1/10). A speed like `0.13` makes actors drift off the grid and they get stuck or
-  turn in the wrong cell. Adjust speed by changing the fraction, never by an arbitrary decimal.
+- Speeds (`PACMAN_SPEED`, `GHOST_SPEED`) must be **exactly `1/n` cells per logical step** — `1/12`,
+  `1/16`, `1/8`, … Never an arbitrary decimal. The actor must land on *every* cell center, because that
+  is the only place turning and dot-eating happen. `0.13` (=13/100) does realign, but only every 100
+  steps after 13 cells: it would eat 1 dot in 13 and turn 13 cells late. Change the denominator only.
+- The logical step is decoupled from the display refresh: `main.js` runs `update()` at a fixed
+  `STEP_MS = 1000 / 60` via an accumulator, while `draw()` runs on every `requestAnimationFrame`.
+  Changing `PACMAN_SPEED`/`GHOST_SPEED` changes gameplay speed; changing `STEP_MS` changes how often
+  the game advances. They are not the same knob.
 - Tunnel wrap (`wrapTunnel`) only applies on `TUNNEL_ROW = 14`; the row string has open ends.
 - Reversing 180° is disallowed for ghosts except in dead ends (`decideGhost` fallback).
 - `game.state` is one of `start | playing | won | lost`; `main.js` switches the overlay on `won`/`lost`.
