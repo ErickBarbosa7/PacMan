@@ -6,6 +6,7 @@ const WALL_COLOR = '#2121ff';
 const DOOR_COLOR = '#ffb8ff';
 const DOT_COLOR = '#ffb897';
 const POWER_PELLET_COLOR = '#33ccff';
+const CORE_COLOR = '#33ff55';
 function cellCenter( x, y ) {
   return { cx: x * TILE + TILE / 2, cy: y * TILE + TILE / 2 };
 }
@@ -87,6 +88,28 @@ function drawPowerPellets( ctx, grid ) {
       const { cx, cy } = cellCenter( x, y );
       ctx.beginPath();
       ctx.arc( cx, cy, 5, 0, Math.PI * 2 );
+      ctx.fill();
+    }
+  }
+}
+
+// Division Core: nucleo verde que pulsa con el frame para llamar la atencion.
+function drawDivisionCore( ctx, grid, frame ) {
+  const pulse = Math.sin( frame * 0.2 ) * 0.5 + 0.5;
+  for ( let y = 0; y < grid.length; y++ ) {
+    for ( let x = 0; x < grid[ 0 ].length; x++ ) {
+      if ( grid[ y ][ x ] !== 5 ) continue;
+      const { cx, cy } = cellCenter( x, y );
+      ctx.strokeStyle = CORE_COLOR;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.4 + 0.6 * pulse;
+      ctx.beginPath();
+      ctx.arc( cx, cy, 4 + 3 * pulse, 0, Math.PI * 2 );
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = CORE_COLOR;
+      ctx.beginPath();
+      ctx.arc( cx, cy, 3 + 1.5 * pulse, 0, Math.PI * 2 );
       ctx.fill();
     }
   }
@@ -181,14 +204,40 @@ function drawGhost( ctx, g, color, frightenedSteps ) {
   }
 }
 
-function drawHUD( ctx, game, W ) {
+// Iconos de vida estilo arcade: lives-1 pacmen quietos abajo a la izquierda
+// (la que se juega esta en el laberinto). Rectangulo negro detras para tapar
+// la linea azul del borde de la fila 30.
+function drawLives( ctx, lives, H ) {
+  const count = lives - 1;
+  if ( count <= 0 ) return;
+  const r = 7;
+  const step = 24;
+  const x0 = 14;
+  const cy = ( H - 1 ) * TILE + TILE / 2;
+  ctx.fillStyle = '#000';
+  ctx.fillRect( 6, cy - r - 3, x0 + ( count - 1 ) * step + r - 2, 2 * r + 6 );
+  for ( let i = 0; i < count; i++ ) {
+    const cx = x0 + i * step;
+    ctx.fillStyle = '#ffff00';
+    ctx.beginPath();
+    ctx.moveTo( cx, cy );
+    ctx.arc( cx, cy, r, Math.PI * 1.22, Math.PI * 0.78 );
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawHUD( ctx, game, W, H ) {
   ctx.fillStyle = '#fff';
   ctx.font = '14px "Courier New", monospace';
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   ctx.fillText( 'SCORE ' + game.score, 8, 4 );
-  ctx.textAlign = 'right';
-  ctx.fillText( 'VIDAS ' + game.lives, W * TILE - 8, 4 );
+  if ( game.dividedSteps > 0 ) {
+    ctx.textAlign = 'right';
+    ctx.fillText( 'DIVIDIDO ' + Math.ceil( game.dividedSteps / 60 ) + 's', W * TILE - 8, 4 );
+  }
+  drawLives( ctx, game.lives, H );
 }
 
 const GHOST_COLORS = [ '#ff0000', '#00ffff', '#ffb8ff', '#ffb852' ];
@@ -205,9 +254,10 @@ function draw( ctx, game, frame ) {
   drawDoor( ctx, grid );
   drawDots( ctx, grid );
   drawPowerPellets( ctx, grid );
-  drawPacman( ctx, game.pacman, frame );
+  drawDivisionCore( ctx, grid, frame );
+  game.pacmen.forEach( ( p ) => drawPacman( ctx, p, frame ) );
   game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000', game.frightenedSteps ) );
-  drawHUD( ctx, game, W );
+  drawHUD( ctx, game, W, H );
 }
 
 window.draw = draw;

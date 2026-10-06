@@ -39,7 +39,7 @@ import/export. The order **is** the wiring; changing it breaks the page.
 ## Maze geometry — four places must stay in sync
 
 The level is authored as 31 readable strings of 28 chars in `maze.js`, then parsed to numbers.
-`#` wall=1 · `.` dot=2 · ` ` walkable empty=0 · `-` pen door=3 · `o` power pellet=4.
+`#` wall=1 · `.` dot=2 · ` ` walkable empty=0 · `-` pen door=3 · `o` power pellet=4 · `c` division core=5.
 
 If you change the grid, update **all** of these or rendering desynchronizes:
 
@@ -74,6 +74,18 @@ no constants module.
 `MAZE` is the never-mutated source of truth. `createGame()` deep-copies rows into `game.grid`, which is
 what eating modifies. Anything that reads "is there a dot here" must use `game.grid`, and
 `render.js` must draw from `game.grid` (not `MAZE`) or eaten dots keep reappearing.
+
+## Divided state (SPEC 06)
+
+- `game.pacmen` is an array: one Pac-Man normally, two while divided. `pacmen[0]` is always the
+  original; the clone is spawned at `PACMAN_START` by `startDivision` (eating the tile-5 core) and is
+  removed on fusion, on death and in `resetPositions`.
+- Input fans out: `main.js` writes the same `nextDir` to every element of `pacmen`. Movement, eating
+  and collisions loop over the array; a life is lost at most once per logical step.
+- `game.dividedSteps` counts down logical steps (600 = 10 s), the same pattern as `frightenedSteps`.
+  Both clocks are cleared together in `resetPositions`.
+- Ghosts target the nearest Pac-Man (`nearestPac`/`pacCell` in `game.js`).
+- While divided a dot pays `DIVIDED_DOT_SCORE` (20) instead of `DOT_SCORE` (10).
 
 ## Style
 

@@ -14,8 +14,12 @@ const PACMAN_SPEED = 1 / 12; // 1/n celda/paso logico para garantizar alineacion
 const GHOST_SPEED = 1 / 16;  // 1/n celda/paso logico para garantizar alineacion
 const POWER_PELLET_SCORE = 50;
 const GHOST_SCORE = 200;
+const CORE_SCORE = 100;
+const DOT_SCORE = 10;
+const DIVIDED_DOT_SCORE = 20; // multiplicador x2 mientras dura la division
 const FRIGHTENED_STEPS = 360;
 const FRIGHTENED_SPEED = 1 / 32; // mitad exacta de GHOST_SPEED (1/16)
+const DIVISION_STEPS = 600;      // 10 s a 60 pasos logicos por segundo
 
 // Desempate entre direcciones a igual distancia: primero la actual, luego
 // derecha, izquierda, arriba y abajo. Evita el vaiven entre rutas optimas.
@@ -50,14 +54,17 @@ function createGame() {
     dotsRemaining: dots,
     energizersLeft: energizers,
     frightenedSteps: 0,
+    dividedSteps: 0,
     grid,
-    pacman: {
-      x: PACMAN_START.x,
-      y: PACMAN_START.y,
-      dir: 'left',
-      nextDir: null,
-      speed: PACMAN_SPEED,
-    },
+    pacmen: [
+      {
+        x: PACMAN_START.x,
+        y: PACMAN_START.y,
+        dir: 'left',
+        nextDir: null,
+        speed: PACMAN_SPEED,
+      },
+    ],
     ghosts: GHOST_STARTS.map( ( g ) => ( {
       x: g.x,
       y: g.y,
@@ -104,8 +111,7 @@ function wrapTunnel( a, width ) {
   }
 }
 
-function movePacman( game ) {
-  const p = game.pacman;
+function movePacman( game, p ) {
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
@@ -121,7 +127,7 @@ function movePacman( game ) {
     // Comer dot.
     if ( grid[ p.y ][ p.x ] === 2 ) {
       grid[ p.y ][ p.x ] = 0;
-      game.score += 10;
+      game.score += game.dividedSteps > 0 ? DIVIDED_DOT_SCORE : DOT_SCORE;
       game.dotsRemaining--;
     }
     // Comer Power Pellet.
@@ -130,6 +136,12 @@ function movePacman( game ) {
       game.score += POWER_PELLET_SCORE;
       game.energizersLeft--;
       startFrightened( game );
+    }
+    // Comer Division Core: reparte el control en dos Pac-Man.
+    if ( grid[ p.y ][ p.x ] === 5 ) {
+      grid[ p.y ][ p.x ] = 0;
+      game.score += CORE_SCORE;
+      startDivision( game );
     }
     // Si no puede seguir, se detiene en la celda.
     if ( !canMove( grid, p.x, p.y, p.dir, 'pacman' ) ) return;
@@ -141,9 +153,37 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
-// Celda de Pac-Man.
-function pacCell( game ) {
-  return { x: Math.round( game.pacman.x ), y: Math.round( game.pacman.y ) };
+// El Pac-Man mas cercano al fantasma g. Con uno solo es siempre el mismo.
+function nearestPac( game, g ) {
+  let best = game.pacmen[ 0 ];
+  let bestDist = Infinity;
+  for ( const p of game.pacmen ) {
+    const dist = Math.abs( p.x - g.x ) + Math.abs( p.y - g.y );
+    if ( dist < bestDist ) {
+      bestDist = dist;
+      best = p;
+    }
+  }
+  return best;
+}
+
+// Celda del Pac-Man mas cercano al fantasma g.
+function pacCell( game, g ) {
+  const p = nearestPac( game, g );
+  return { x: Math.round( p.x ), y: Math.round( p.y ) };
+}
+
+// Activa el estado dividido: un clon en PACMAN_START y el reloj a tope.
+function startDivision( game ) {
+  if ( game.pacmen.length > 1 ) return;
+  game.dividedSteps = DIVISION_STEPS;
+  game.pacmen.push( {
+    x: PACMAN_START.x,
+    y: PACMAN_START.y,
+    dir: 'left',
+    nextDir: null,
+    speed: PACMAN_SPEED,
+  } );
 }
 
 function startFrightened( game ) {
@@ -190,20 +230,21 @@ function clampToGrid( target, grid ) {
 // que devuelven una celda; lo que los distingue es cual.
 function targetFor( game, g ) {
   const grid = game.grid;
-  const pac = pacCell( game );
+  const pac = pacCell( game, g );
+  const targetPac = nearestPac( game, g );
 
   // hunter: persigue la celda de Pac-Man. Es el agresivo.
   if ( g.kind === 'hunter' ) return pac;
 
   // ambush: se coloca 4 celdas por delante para cortarle el paso.
-  if ( g.kind === 'ambush' ) return clampToGrid( aheadCell( game.pacman, 4 ), grid );
+  if ( g.kind === 'ambush' ) return clampToGrid( aheadCell( targetPac, 4 ), grid );
 
   // flank: duplica el vector hunter -> 2 celdas por delante de Pac-Man, de modo
   // que entra por el lado opuesto al del hunter.
   if ( g.kind === 'flank' ) {
-    const hunter = game.ghosts.find( ( other ) => other.kind === 'hunter' ) || game.pacman;
+    const hunter = game.ghosts.find( ( other ) => other.kind === 'hunter' ) || targetPac;
     const from = { x: Math.round( hunter.x ), y: Math.round( hunter.y ) };
-    const ahead = aheadCell( game.pacman, 2 );
+    const ahead = aheadCell( targetPac, 2 );
     return clampToGrid(
       {
         x: from.x + ( ahead.x - from.x ) * 2,
@@ -329,7 +370,10 @@ function moveGhost( game, g ) {
 
 function resetPositions( game ) {
   game.frightenedSteps = 0;
-  const p = game.pacman;
+  game.dividedSteps = 0;
+  // Vuelve a un solo Pac-Man: el original en su celda de inicio.
+  game.pacmen = [ game.pacmen[ 0 ] ];
+  const p = game.pacmen[ 0 ];
   p.x = PACMAN_START.x;
   p.y = PACMAN_START.y;
   p.dir = 'left';
@@ -348,7 +392,7 @@ function collides( a, b ) {
 }
 
 function update( game ) {
-  movePacman( game );
+  game.pacmen.forEach( ( p ) => movePacman( game, p ) );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
   if ( game.frightenedSteps > 0 ) {
@@ -365,8 +409,20 @@ function update( game ) {
     }
   }
 
+  // Reloj del estado dividido: al llegar a 0, fusion en el original.
+  if ( game.dividedSteps > 0 ) {
+    game.dividedSteps--;
+    if ( game.dividedSteps === 0 && game.pacmen.length > 1 ) {
+      game.pacmen = [ game.pacmen[ 0 ] ];
+    }
+  }
+
+  // Una sola vida por paso: al perderla se sale del bucle.
+  let lostLife = false;
   for ( const g of game.ghosts ) {
-    if ( collides( game.pacman, g ) ) {
+    if ( lostLife ) break;
+    for ( const p of game.pacmen ) {
+      if ( !collides( p, g ) ) continue;
       if ( g.state === 'eaten' ) {
         // Nada
       } else if ( g.state === 'frightened' ) {
@@ -378,6 +434,7 @@ function update( game ) {
           return;
         }
         resetPositions( game );
+        lostLife = true;
         break;
       }
     }
