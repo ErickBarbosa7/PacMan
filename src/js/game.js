@@ -406,6 +406,14 @@ function update( game ) {
     }
   }
 
+  // Reloj del estado dividido: al llegar a 0, fusion en el original.
+  if ( game.dividedSteps > 0 ) {
+    game.dividedSteps--;
+    if ( game.dividedSteps === 0 && game.pacmen.length > 1 ) {
+      game.pacmen = [ game.pacmen[ 0 ] ];
+    }
+  }
+
   for ( const g of game.ghosts ) {
     for ( const p of game.pacmen ) {
       if ( !collides( p, g ) ) continue;
