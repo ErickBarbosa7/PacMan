@@ -368,6 +368,7 @@ function moveGhost( game, g ) {
 
 function resetPositions( game ) {
   game.frightenedSteps = 0;
+  game.dividedSteps = 0;
   // Vuelve a un solo Pac-Man: el original en su celda de inicio.
   game.pacmen = [ game.pacmen[ 0 ] ];
   const p = game.pacmen[ 0 ];
@@ -414,7 +415,10 @@ function update( game ) {
     }
   }
 
+  // Una sola vida por paso: al perderla se sale del bucle.
+  let lostLife = false;
   for ( const g of game.ghosts ) {
+    if ( lostLife ) break;
     for ( const p of game.pacmen ) {
       if ( !collides( p, g ) ) continue;
       if ( g.state === 'eaten' ) {
@@ -428,6 +432,7 @@ function update( game ) {
           return;
         }
         resetPositions( game );
+        lostLife = true;
         break;
       }
     }
