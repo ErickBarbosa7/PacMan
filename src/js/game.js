@@ -14,8 +14,10 @@ const PACMAN_SPEED = 1 / 12; // 1/n celda/paso logico para garantizar alineacion
 const GHOST_SPEED = 1 / 16;  // 1/n celda/paso logico para garantizar alineacion
 const POWER_PELLET_SCORE = 50;
 const GHOST_SCORE = 200;
+const CORE_SCORE = 100;
 const FRIGHTENED_STEPS = 360;
 const FRIGHTENED_SPEED = 1 / 32; // mitad exacta de GHOST_SPEED (1/16)
+const DIVISION_STEPS = 600;      // 10 s a 60 pasos logicos por segundo
 
 // Desempate entre direcciones a igual distancia: primero la actual, luego
 // derecha, izquierda, arriba y abajo. Evita el vaiven entre rutas optimas.
@@ -50,6 +52,7 @@ function createGame() {
     dotsRemaining: dots,
     energizersLeft: energizers,
     frightenedSteps: 0,
+    dividedSteps: 0,
     grid,
     pacmen: [
       {
@@ -132,6 +135,12 @@ function movePacman( game, p ) {
       game.energizersLeft--;
       startFrightened( game );
     }
+    // Comer Division Core: reparte el control en dos Pac-Man.
+    if ( grid[ p.y ][ p.x ] === 5 ) {
+      grid[ p.y ][ p.x ] = 0;
+      game.score += CORE_SCORE;
+      startDivision( game );
+    }
     // Si no puede seguir, se detiene en la celda.
     if ( !canMove( grid, p.x, p.y, p.dir, 'pacman' ) ) return;
   }
@@ -160,6 +169,19 @@ function nearestPac( game, g ) {
 function pacCell( game, g ) {
   const p = nearestPac( game, g );
   return { x: Math.round( p.x ), y: Math.round( p.y ) };
+}
+
+// Activa el estado dividido: un clon en PACMAN_START y el reloj a tope.
+function startDivision( game ) {
+  if ( game.pacmen.length > 1 ) return;
+  game.dividedSteps = DIVISION_STEPS;
+  game.pacmen.push( {
+    x: PACMAN_START.x,
+    y: PACMAN_START.y,
+    dir: 'left',
+    nextDir: null,
+    speed: PACMAN_SPEED,
+  } );
 }
 
 function startFrightened( game ) {
