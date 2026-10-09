@@ -6,6 +6,7 @@ const WALL_COLOR = '#2121ff';
 const DOOR_COLOR = '#ffb8ff';
 const DOT_COLOR = '#ffb897';
 const POWER_PELLET_COLOR = '#33ccff';
+const CORE_COLOR = '#33ff55';
 function cellCenter( x, y ) {
   return { cx: x * TILE + TILE / 2, cy: y * TILE + TILE / 2 };
 }
@@ -87,6 +88,28 @@ function drawPowerPellets( ctx, grid ) {
       const { cx, cy } = cellCenter( x, y );
       ctx.beginPath();
       ctx.arc( cx, cy, 5, 0, Math.PI * 2 );
+      ctx.fill();
+    }
+  }
+}
+
+// Division Core: nucleo verde que pulsa con el frame para llamar la atencion.
+function drawDivisionCore( ctx, grid, frame ) {
+  const pulse = Math.sin( frame * 0.2 ) * 0.5 + 0.5;
+  for ( let y = 0; y < grid.length; y++ ) {
+    for ( let x = 0; x < grid[ 0 ].length; x++ ) {
+      if ( grid[ y ][ x ] !== 5 ) continue;
+      const { cx, cy } = cellCenter( x, y );
+      ctx.strokeStyle = CORE_COLOR;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.4 + 0.6 * pulse;
+      ctx.beginPath();
+      ctx.arc( cx, cy, 4 + 3 * pulse, 0, Math.PI * 2 );
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = CORE_COLOR;
+      ctx.beginPath();
+      ctx.arc( cx, cy, 3 + 1.5 * pulse, 0, Math.PI * 2 );
       ctx.fill();
     }
   }
@@ -205,6 +228,7 @@ function draw( ctx, game, frame ) {
   drawDoor( ctx, grid );
   drawDots( ctx, grid );
   drawPowerPellets( ctx, grid );
+  drawDivisionCore( ctx, grid, frame );
   drawPacman( ctx, game.pacman, frame );
   game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000', game.frightenedSteps ) );
   drawHUD( ctx, game, W );
