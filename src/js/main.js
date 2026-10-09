@@ -20,7 +20,7 @@ document.addEventListener( 'keydown', ( e ) => {
   const dir = KEY_DIR[ e.key ];
   if ( !dir ) return;
   e.preventDefault();
-  if ( game.state === 'playing' ) game.pacman.nextDir = dir;
+  if ( game.state === 'playing' ) game.pacmen.forEach( ( p ) => ( p.nextDir = dir ) );
 } );
 
 function showOverlay( title, cls, btnLabel ) {

@@ -51,13 +51,15 @@ function createGame() {
     energizersLeft: energizers,
     frightenedSteps: 0,
     grid,
-    pacman: {
-      x: PACMAN_START.x,
-      y: PACMAN_START.y,
-      dir: 'left',
-      nextDir: null,
-      speed: PACMAN_SPEED,
-    },
+    pacmen: [
+      {
+        x: PACMAN_START.x,
+        y: PACMAN_START.y,
+        dir: 'left',
+        nextDir: null,
+        speed: PACMAN_SPEED,
+      },
+    ],
     ghosts: GHOST_STARTS.map( ( g ) => ( {
       x: g.x,
       y: g.y,
@@ -104,8 +106,7 @@ function wrapTunnel( a, width ) {
   }
 }
 
-function movePacman( game ) {
-  const p = game.pacman;
+function movePacman( game, p ) {
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
@@ -141,9 +142,24 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
-// Celda de Pac-Man.
-function pacCell( game ) {
-  return { x: Math.round( game.pacman.x ), y: Math.round( game.pacman.y ) };
+// El Pac-Man mas cercano al fantasma g. Con uno solo es siempre el mismo.
+function nearestPac( game, g ) {
+  let best = game.pacmen[ 0 ];
+  let bestDist = Infinity;
+  for ( const p of game.pacmen ) {
+    const dist = Math.abs( p.x - g.x ) + Math.abs( p.y - g.y );
+    if ( dist < bestDist ) {
+      bestDist = dist;
+      best = p;
+    }
+  }
+  return best;
+}
+
+// Celda del Pac-Man mas cercano al fantasma g.
+function pacCell( game, g ) {
+  const p = nearestPac( game, g );
+  return { x: Math.round( p.x ), y: Math.round( p.y ) };
 }
 
 function startFrightened( game ) {
@@ -190,20 +206,21 @@ function clampToGrid( target, grid ) {
 // que devuelven una celda; lo que los distingue es cual.
 function targetFor( game, g ) {
   const grid = game.grid;
-  const pac = pacCell( game );
+  const pac = pacCell( game, g );
+  const targetPac = nearestPac( game, g );
 
   // hunter: persigue la celda de Pac-Man. Es el agresivo.
   if ( g.kind === 'hunter' ) return pac;
 
   // ambush: se coloca 4 celdas por delante para cortarle el paso.
-  if ( g.kind === 'ambush' ) return clampToGrid( aheadCell( game.pacman, 4 ), grid );
+  if ( g.kind === 'ambush' ) return clampToGrid( aheadCell( targetPac, 4 ), grid );
 
   // flank: duplica el vector hunter -> 2 celdas por delante de Pac-Man, de modo
   // que entra por el lado opuesto al del hunter.
   if ( g.kind === 'flank' ) {
-    const hunter = game.ghosts.find( ( other ) => other.kind === 'hunter' ) || game.pacman;
+    const hunter = game.ghosts.find( ( other ) => other.kind === 'hunter' ) || targetPac;
     const from = { x: Math.round( hunter.x ), y: Math.round( hunter.y ) };
-    const ahead = aheadCell( game.pacman, 2 );
+    const ahead = aheadCell( targetPac, 2 );
     return clampToGrid(
       {
         x: from.x + ( ahead.x - from.x ) * 2,
@@ -329,7 +346,9 @@ function moveGhost( game, g ) {
 
 function resetPositions( game ) {
   game.frightenedSteps = 0;
-  const p = game.pacman;
+  // Vuelve a un solo Pac-Man: el original en su celda de inicio.
+  game.pacmen = [ game.pacmen[ 0 ] ];
+  const p = game.pacmen[ 0 ];
   p.x = PACMAN_START.x;
   p.y = PACMAN_START.y;
   p.dir = 'left';
@@ -348,7 +367,7 @@ function collides( a, b ) {
 }
 
 function update( game ) {
-  movePacman( game );
+  game.pacmen.forEach( ( p ) => movePacman( game, p ) );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
   if ( game.frightenedSteps > 0 ) {
@@ -366,7 +385,8 @@ function update( game ) {
   }
 
   for ( const g of game.ghosts ) {
-    if ( collides( game.pacman, g ) ) {
+    for ( const p of game.pacmen ) {
+      if ( !collides( p, g ) ) continue;
       if ( g.state === 'eaten' ) {
         // Nada
       } else if ( g.state === 'frightened' ) {

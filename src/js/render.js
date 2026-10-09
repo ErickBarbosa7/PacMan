@@ -229,7 +229,7 @@ function draw( ctx, game, frame ) {
   drawDots( ctx, grid );
   drawPowerPellets( ctx, grid );
   drawDivisionCore( ctx, grid, frame );
-  drawPacman( ctx, game.pacman, frame );
+  game.pacmen.forEach( ( p ) => drawPacman( ctx, p, frame ) );
   game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000', game.frightenedSteps ) );
   drawHUD( ctx, game, W );
 }
