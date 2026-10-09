@@ -15,6 +15,8 @@ const GHOST_SPEED = 1 / 16;  // 1/n celda/paso logico para garantizar alineacion
 const POWER_PELLET_SCORE = 50;
 const GHOST_SCORE = 200;
 const CORE_SCORE = 100;
+const DOT_SCORE = 10;
+const DIVIDED_DOT_SCORE = 20; // multiplicador x2 mientras dura la division
 const FRIGHTENED_STEPS = 360;
 const FRIGHTENED_SPEED = 1 / 32; // mitad exacta de GHOST_SPEED (1/16)
 const DIVISION_STEPS = 600;      // 10 s a 60 pasos logicos por segundo
@@ -125,7 +127,7 @@ function movePacman( game, p ) {
     // Comer dot.
     if ( grid[ p.y ][ p.x ] === 2 ) {
       grid[ p.y ][ p.x ] = 0;
-      game.score += 10;
+      game.score += game.dividedSteps > 0 ? DIVIDED_DOT_SCORE : DOT_SCORE;
       game.dotsRemaining--;
     }
     // Comer Power Pellet.
