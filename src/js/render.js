@@ -204,14 +204,40 @@ function drawGhost( ctx, g, color, frightenedSteps ) {
   }
 }
 
-function drawHUD( ctx, game, W ) {
+// Iconos de vida estilo arcade: lives-1 pacmen quietos abajo a la izquierda
+// (la que se juega esta en el laberinto). Rectangulo negro detras para tapar
+// la linea azul del borde de la fila 30.
+function drawLives( ctx, lives, H ) {
+  const count = lives - 1;
+  if ( count <= 0 ) return;
+  const r = 7;
+  const step = 24;
+  const x0 = 14;
+  const cy = ( H - 1 ) * TILE + TILE / 2;
+  ctx.fillStyle = '#000';
+  ctx.fillRect( 6, cy - r - 3, x0 + ( count - 1 ) * step + r - 2, 2 * r + 6 );
+  for ( let i = 0; i < count; i++ ) {
+    const cx = x0 + i * step;
+    ctx.fillStyle = '#ffff00';
+    ctx.beginPath();
+    ctx.moveTo( cx, cy );
+    ctx.arc( cx, cy, r, Math.PI * 1.22, Math.PI * 0.78 );
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawHUD( ctx, game, W, H ) {
   ctx.fillStyle = '#fff';
   ctx.font = '14px "Courier New", monospace';
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   ctx.fillText( 'SCORE ' + game.score, 8, 4 );
-  ctx.textAlign = 'right';
-  ctx.fillText( 'VIDAS ' + game.lives, W * TILE - 8, 4 );
+  if ( game.dividedSteps > 0 ) {
+    ctx.textAlign = 'right';
+    ctx.fillText( 'DIVIDIDO ' + Math.ceil( game.dividedSteps / 60 ) + 's', W * TILE - 8, 4 );
+  }
+  drawLives( ctx, game.lives, H );
 }
 
 const GHOST_COLORS = [ '#ff0000', '#00ffff', '#ffb8ff', '#ffb852' ];
@@ -231,7 +257,7 @@ function draw( ctx, game, frame ) {
   drawDivisionCore( ctx, grid, frame );
   game.pacmen.forEach( ( p ) => drawPacman( ctx, p, frame ) );
   game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000', game.frightenedSteps ) );
-  drawHUD( ctx, game, W );
+  drawHUD( ctx, game, W, H );
 }
 
 window.draw = draw;
