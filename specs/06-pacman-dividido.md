@@ -1,6 +1,6 @@
 # SPEC 06 — Pac-Man dividido en dos
 
-> **Status:** Draft
+> **Status:** Approved
 > **Depends on:** SPEC 04
 > **Date:** 2026-10-06
 > **Objective:** Un Division Core reparte el control entre dos Pac-Man que comparten teclado y vida durante 10 segundos, con los puntos de las bolitas duplicados mientras dure el estado.
@@ -78,15 +78,26 @@ Convenciones:
 
 ## Implementation plan
 
+Cada paso termina en un commit propio con el mensaje `spec 06 paso N: <resumen>`, de modo que cada cambio del plan se pueda revisar y revertir por separado.
+
 1. En `maze.js`, añadir `if ( ch === 'c' ) return 5;` a `parseTile`, poner `c` en la celda (13,17) de la fila 17 y actualizar el comentario de cabecera con el tile nuevo. Prueba manual: el juego carga y en consola `MAZE[ 17 ][ 13 ] === 5`.
+   Commit: `spec 06 paso 1: tile division core en maze.js`.
 2. En `render.js`, declarar `CORE_COLOR` y añadir `drawDivisionCore( ctx, grid, frame )`, un círculo que pulsa (radio alternando con `frame`) en cada celda con tile `5`, llamada en `draw()` justo después de `drawPowerPellets`. Prueba manual: se ve un núcleo verde pulsando en el centro del laberinto. `index.html`, `style.css` y `TILE` no se tocan.
+   Commit: `spec 06 paso 2: dibujar division core pulsante`.
 3. En `game.js`, renombrar `game.pacman` a `game.pacmen` (array de un elemento) sin cambiar el comportamiento: `movePacman( game, p )` recibe el personaje, `update()` lo llama en bucle, la colisión recorre `pacmen`, `resetPositions` reconstruye el array con el original, `nearestPac( game, g )` devuelve el Pac-Man más cercano al fantasma y `targetFor` se apoya en él. `main.js` escribe `nextDir` en todos los `pacmen` y `render.js` dibuja todos. Prueba manual: se juega idéntico a antes, el `hunter` sigue persiguiendo igual.
+   Commit: `spec 06 paso 3: refactor a game.pacmen`.
 4. En `game.js`, detectar el tile `5` en el ramo de comida de `movePacman`: sumar `CORE_SCORE`, vaciar la celda y llamar a `startDivision( game )`, que solo si `pacmen.length === 1` empuja un clon en `PACMAN_START` con `dir: 'left'` y pone `dividedSteps = DIVISION_STEPS`. Prueba manual: al comer el núcleo aparece el segundo Pac-Man y ambos responden a la misma flecha.
+   Commit: `spec 06 paso 4: comer core y clonar pac-man`.
 5. En `game.js`, bajar `dividedSteps` en cada paso lógico de `update()` y, al llegar a 0, quitar el clon (`pacmen = [ pacmen[ 0 ] ]`). Prueba manual: 10 segundos después de comer el núcleo vuelve a haber un solo Pac-Man, en la posición en la que estaba el original.
+   Commit: `spec 06 paso 5: reloj dividedSteps y fusion`.
 6. En `game.js`, hacer que la colisión mire a todos los `pacmen`: un fantasma `frightened` comido por cualquiera suma 200 como hasta ahora, y un fantasma `normal` que atrape a cualquiera resta una vida, termina el estado dividido (`dividedSteps = 0`, quitar el clon) y llama a `resetPositions`. Mantener la regla de una vida por paso. Prueba manual: si atrapan al clon se pierde una vida y el juego vuelve a un solo Pac-Man; si atrapan al original, idem.
+   Commit: `spec 06 paso 6: colisiones sobre todos los pacmen`.
 7. En `game.js`, sustituir el literal `10` de las bolitas por `game.dividedSteps > 0 ? DIVIDED_DOT_SCORE : DOT_SCORE`. Prueba manual: dividido una bolita suma 20 y al fusionar vuelve a sumar 10.
+   Commit: `spec 06 paso 7: puntaje doble de bolitas`.
 8. En `render.js`, rehacer el HUD: `SCORE` sigue arriba-izquierda; arriba-derecha, solo cuando `dividedSteps > 0`, `DIVIDIDO ` + `Math.ceil( dividedSteps / 60 )` + `s`; abajo-izquierda, `drawLives( ctx, game.lives )` pinta `lives - 1` iconos de Pac-Man amarillos (radio 7, boca fija, mirando a la izquierda) sobre un rectángulo negro que tape la línea azul del borde, y desaparece el texto `VIDAS N`. Prueba manual: con 3 vidas se ven 2 iconos abajo; al perder una, 1 icono.
+   Commit: `spec 06 paso 8: HUD dividido e iconos de vida`.
 9. En `AGENTS.md`, documentar el tile `5` junto a los demás, el array `pacmen` y el reloj `dividedSteps`. Prueba manual: el archivo refleja el código.
+   Commit: `spec 06 paso 9: documentar estado dividido en AGENTS.md`.
 
 ## Acceptance criteria
 
@@ -109,6 +120,7 @@ Convenciones:
 - [ ] Reiniciar desde el overlay limpia cualquier estado dividido.
 - [ ] Ningún personaje se queda atascado entre celdas.
 - [ ] Ganar sigue dependiendo solo de `dotsRemaining === 0`: el core no bloquea la victoria.
+- [ ] Cada paso del plan tiene su commit `spec 06 paso N: <resumen>`.
 
 ## Decisions
 
@@ -136,6 +148,8 @@ Convenciones:
 - **No:** texto `VIDAS N`. El arcade no lo lleva y el icono se lee sin traducir.
 - **Sí:** un rectángulo negro detrás de los iconos de vida. La fila 30 pinta una línea azul de borde y los iconos flotarían sobre ella.
 - **No:** tocar `index.html` o `style.css` para el HUD. Todo el HUD ya vive en `drawHUD`.
+- **Sí:** un commit por paso del plan (`spec 06 paso N: <resumen>`). Cada cambio queda aislado para revisarlo o revertirlo sin arrastrar el resto.
+- **No:** un único commit con toda la spec. Mezcla el refactor de `pacmen[]`, el HUD y el tile, y no deja volver a un punto concreto.
 - **No:** respawn del core ni niveles 2–5 del documento (velocidades distintas, fusión manual, triple división).
 
 ## Risks
